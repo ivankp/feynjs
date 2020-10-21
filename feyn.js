@@ -1,35 +1,81 @@
-jQuery.prototype.svg = function(tag,attr) {
-  const x = $(document.createElementNS('http://www.w3.org/2000/svg',tag))
-    .appendTo(this);
-  if (attr) x.attr(attr);
-  return x;
-}
 // http://www.petercollingridge.co.uk/tutorials/svg/interactive/dragging/
+// https://developer.mozilla.org/en-US/docs/Web/API/SVGTransformList
 
-$(() => {
-  const $svg = $('#canv').svg('svg',{
+function _id(id) { return document.getElementById(id); }
+function _el(tag) { return document.createElement(tag); }
+
+class SVG {
+  constructor(tag,p) {
+    this._ = document.createElementNS('http://www.w3.org/2000/svg',tag);
+    if (p) p.appendChild(this._);
+  }
+  attr(arg,v) {
+    if (arg instanceof Object)
+      for (const [key,val] of Object.entries(arg))
+        this._.setAttributeNS(null,key,val);
+    else if (v) this._.setAttributeNS(null,arg,v);
+    else return this._.getAttributeNS(null,arg);
+    return this;
+  }
+  style(arg,v) {
+    if (arg instanceof Object)
+      for (const [key,val] of Object.entries(arg))
+        this._.style[key] = val;
+    else if (v) this._.style[arg] = v;
+    else return this._.style[arg];
+    return this;
+  }
+}
+for (const [name,type,f] of [
+  ['translate', SVGTransform.SVG_TRANSFORM_TRANSLATE, (xf,x,y) => {
+    xf.setTranslate(x||0,y||0);
+  }],
+  ['scale', SVGTransform.SVG_TRANSFORM_SCALE, (xf,x,y) => {
+    xf.setScale(x||0,y||x||0);
+  }]
+]) {
+  SVG.prototype[name] = function() {
+    const xfs = this._.transform.baseVal;
+    const n = xfs.numberOfItems;
+    let xf;
+    for (let i=0; i<n; ++i) {
+      xf = xfs.getItem(i);
+      if (xf.type === type) break;
+      xf = null;
+    }
+    if (xf) {
+      f(xf,...arguments);
+    } else {
+      xf = this._.ownerSVGElement.createSVGTransform();
+      f(xf,...arguments);
+      xfs.appendItem(xf);
+    }
+    return arguments.length ? this : xf;
+  }
+}
+
+function transform(el,fs) {
+  const ts = el.transform.baseVal;
+  for (const f of fs) {
+    const tr = el.ownerSVGElement.createSVGTransform();
+    f(tr);
+    ts.appendItem(tr);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const svg = new SVG('svg',_id('canv')).attr({
     viewBox: '0 0 500 500', width: 500, height: 500
-  });
-  const svg = $svg[0];
+  })._;
 
   function pos(e) {
     const cmt = svg.getScreenCTM();
     return [ (e.clientX-cmt.e)/cmt.a, (e.clientY-cmt.f)/cmt.d ];
   }
 
-  function transform(el,fs) {
-    const ts = el[0].transform.baseVal;
-    for (const f of fs) {
-      const tr = svg.createSVGTransform();
-      f(tr);
-      ts.appendItem(tr);
-    }
-    return el;
-  }
-
   let p0, el, tr, bnd;
 
-  $svg.on('mousedown',function(e){
+  svg.addEventListener('mousedown',function(e){
     e.preventDefault();
     if (e.target !== svg) {
       p0 = pos(e);
@@ -45,7 +91,8 @@ $(() => {
         v.height - b.y - b.height
       ];
     }
-  }).on('mousemove',function(e){
+  });
+  svg.addEventListener('mousemove',function(e){
     if (el) {
       const p = pos(e);
       let dx = p[0]-p0[0], dy = p[1]-p0[1];
@@ -55,41 +102,66 @@ $(() => {
       else if (dy > bnd[3]) dy = bnd[3];
       tr.setTranslate(dx,dy);
     }
-  }).on('mouseup',function(e){
+  });
+  svg.addEventListener('mouseup',function(e){
     el = null;
-  }).on('mouseleave',function(e){
+  });
+  svg.addEventListener('mouseleave',function(e){
     el = null;
   });
 
-  // https://developer.mozilla.org/en-US/docs/Web/API/SVGTransformList
+  const tools = new DocumentFragment();
 
-  $('#tools').append([
-    $('<button>').text('fermion').on('click',function(){
-      transform(
-        $svg.svg('path',{
-          'd': 'M 0,0 100,0'
-        }).css({
-          'stroke': '#000000',
-          'stroke-width': 4,
-          'stroke-linecap': 'round',
-          'stroke-linejoin': 'round'
-        }),
-        [ t => t.setTranslate(20,20) ]
-      );
-    }),
-    $('<button>').text('arrow').on('click',function(){
-      transform(
-        $svg.svg('path',{
-          'd': 'm 0,0 -5,2 1,-2 -1,-2 5,2 z'
-        }).css({
-          'stroke': '#000000',
-          'fill': '#000000',
-          'stroke-width': 1,
-          'stroke-linecap': 'round',
-          'stroke-linejoin': 'round'
-        }),
-        [ t => t.setTranslate(20,20), t => t.setScale(2.5,2.5) ]
-      );
-    })
-  ]);
+  let btn = _el('button');
+  tools.appendChild(btn);
+  btn.textContent = 'fermion';
+  btn.addEventListener('click',function(){
+    const path = new SVG('path',svg).attr({
+      'd': 'm 0,0 100,0'
+    }).style({
+      'stroke': '#000000',
+      'fill': 'none',
+      'stroke-width': 4,
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round'
+    });
+    path.translate(20,20);
+  });
+
+  btn = _el('button');
+  tools.appendChild(btn);
+  btn.textContent = 'arrow';
+  btn.addEventListener('click',function(){
+    const path = new SVG('path',svg).attr({
+      'd': 'm 0,0 -5,2 1,-2 -1,-2 5,2 z'
+    }).style({
+      'stroke': '#000000',
+      'fill': '#000000',
+      'stroke-width': 1,
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round'
+    });
+    path.translate(20,20);
+    path.scale(2.5);
+  });
+
+  btn = _el('button');
+  tools.appendChild(btn);
+  btn.textContent = 'photon';
+  btn.addEventListener('click',function(){
+    const path = new SVG('path',svg).attr({
+      'd': 'm 0,0 c 4.4563,8.6668 6.0438,8.6668 10.5,0 4.4563,-8.6668 6.0438,-8.6668 10.5,0 4.4563,8.6668 6.0438,8.6668 10.5,0 4.4563,-8.6668 6.0438,-8.6668 10.5,0 4.4563,8.6668 6.0441,8.6668 10.5001,0 4.456,-8.6668 6.044,-8.6668 10.5,0 4.456,8.6668 6.044,8.6668 10.5,0 4.456,-8.6668 6.044,-8.6668 10.5,0'
+      // 'd': 'M0 50 C 40 10, 60 10, 100 50 C 140 90, 160 90, 200 50 C 240 10, 260 10, 300 50 C 340 90, 360 90, 400 50'
+    }).style({
+      'stroke': '#000000',
+      'fill': 'none',
+      'stroke-width': 2,
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round'
+    });
+    path.translate(20,20);
+    path.scale(1.5);
+  });
+
+  _id('tools').appendChild(tools);
 });
