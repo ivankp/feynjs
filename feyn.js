@@ -56,8 +56,13 @@ for (const [name,type,f] of [
 
 document.addEventListener('DOMContentLoaded', () => {
   const svg = new SVG('svg',_id('canv')).attr({
-    viewBox: '0 0 500 500', width: 500, height: 500,
+    viewBox: '0 0 600 600', width: 600, height: 600,
     'shape-rendering': 'geometricPrecision'
+  }).style({
+    'stroke': '#000000',
+    'fill': 'none',
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round'
   })._;
 
   function pos(e) {
@@ -109,42 +114,34 @@ document.addEventListener('DOMContentLoaded', () => {
   const tools = new DocumentFragment();
 
   let btn = _el('button');
-  tools.appendChild(btn);
   btn.textContent = 'fermion';
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
     const path = new SVG('path',g._).attr({
       'd': 'm 0,0 100,0'
     }).style({
-      'stroke': '#000000',
-      'fill': 'none',
       'stroke-width': 3,
-      'stroke-linecap': 'round',
-      'stroke-linejoin': 'round'
     });
     g.translate(20,20);
   });
+  tools.appendChild(btn);
 
   btn = _el('button');
-  tools.appendChild(btn);
   btn.textContent = 'arrow';
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
     const path = new SVG('path',g._).attr({
       'd': 'm 0,0 -5,2 1,-2 -1,-2 5,2 z'
     }).style({
-      'stroke': '#000000',
       'fill': '#000000',
       'stroke-width': 1,
-      'stroke-linecap': 'round',
-      'stroke-linejoin': 'round'
     });
     path.scale(2.25);
     g.translate(20,20);
   });
+  tools.appendChild(btn);
 
   btn = _el('button');
-  tools.appendChild(btn);
   btn.textContent = 'photon';
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
@@ -152,15 +149,29 @@ document.addEventListener('DOMContentLoaded', () => {
       'd': 'm 0,0 c 4.4563,8.6668 6.0438,8.6668 10.5,0 4.4563,-8.6668 6.0438,-8.6668 10.5,0 4.4563,8.6668 6.0438,8.6668 10.5,0 4.4563,-8.6668 6.0438,-8.6668 10.5,0 4.4563,8.6668 6.0441,8.6668 10.5001,0 4.456,-8.6668 6.044,-8.6668 10.5,0 4.456,8.6668 6.044,8.6668 10.5,0 4.456,-8.6668 6.044,-8.6668 10.5,0'
       // 'd': 'M0 50 C 40 10, 60 10, 100 50 C 140 90, 160 90, 200 50 C 240 10, 260 10, 300 50 C 340 90, 360 90, 400 50'
     }).style({
-      'stroke': '#000000',
-      'fill': 'none',
       'stroke-width': 2,
-      'stroke-linecap': 'round',
-      'stroke-linejoin': 'round'
     });
     path.scale(1.5);
     g.translate(20,20);
   });
+  tools.appendChild(btn);
 
-  _id('tools').appendChild(tools);
+  const dummy_a = _el('a');
+  btn = _el('button');
+  btn.classList.add('right');
+  btn.textContent = 'save';
+  btn.addEventListener('click',function(){
+    dummy_a.href = URL.createObjectURL(new Blob(
+      [ '<?xml version="1.0" encoding="UTF-8" ?>\n',
+        svg.outerHTML.replace(/^<svg/,'$& xmlns="'+svg.namespaceURI+'"') ],
+      { type:"image/svg+xml;charset=utf-8" }
+    ));
+    dummy_a.download = 'feyn.svg';
+    dummy_a.click();
+  });
+  tools.appendChild(btn);
+
+  const tools_el = _id('tools');
+  tools_el.appendChild(tools);
+  tools_el.style.width = _id('canv').offsetWidth+'px'
 });

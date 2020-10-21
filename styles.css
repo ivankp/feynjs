@@ -1,4 +1,8 @@
-div { margin: 0; }
+div {
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
 
 #tools {
   -webkit-touch-callout: none; /* iOS Safari */
@@ -7,14 +11,16 @@ div { margin: 0; }
        -moz-user-select: none; /* Firefox */
         -ms-user-select: none; /* Internet Explorer, Edge */
             user-select: none; /* Future */
-}
 
-#tools {
   margin-bottom: 5px;
 }
 
 #tools button:not(:last-child) {
   margin-right: 5px;
+}
+
+.right {
+  float: right;
 }
 
 #canv {
