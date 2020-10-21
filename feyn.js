@@ -54,18 +54,10 @@ for (const [name,type,f] of [
   }
 }
 
-function transform(el,fs) {
-  const ts = el.transform.baseVal;
-  for (const f of fs) {
-    const tr = el.ownerSVGElement.createSVGTransform();
-    f(tr);
-    ts.appendItem(tr);
-  }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   const svg = new SVG('svg',_id('canv')).attr({
-    viewBox: '0 0 500 500', width: 500, height: 500
+    viewBox: '0 0 500 500', width: 500, height: 500,
+    'shape-rendering': 'geometricPrecision'
   })._;
 
   function pos(e) {
@@ -77,9 +69,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   svg.addEventListener('mousedown',function(e){
     e.preventDefault();
-    if (e.target !== svg) {
+    el = null;
+    for (const x of e.composedPath()) {
+      if (x!==svg) el = x;
+      else break;
+    }
+    if (el) {
       p0 = pos(e);
-      el = e.target;
       tr = el.transform.baseVal.getItem(0);
       p0[0] -= tr.matrix.e;
       p0[1] -= tr.matrix.f;
@@ -95,12 +91,12 @@ document.addEventListener('DOMContentLoaded', () => {
   svg.addEventListener('mousemove',function(e){
     if (el) {
       const p = pos(e);
-      let dx = p[0]-p0[0], dy = p[1]-p0[1];
-      if (dx < bnd[0]) dx = bnd[0];
-      else if (dx > bnd[1]) dx = bnd[1];
-      if (dy < bnd[2]) dy = bnd[2];
-      else if (dy > bnd[3]) dy = bnd[3];
-      tr.setTranslate(dx,dy);
+      let x = p[0]-p0[0], y = p[1]-p0[1];
+      if (x < bnd[0]) x = bnd[0];
+      else if (x > bnd[1]) x = bnd[1];
+      if (y < bnd[2]) y = bnd[2];
+      else if (y > bnd[3]) y = bnd[3];
+      tr.setTranslate(x,y);
     }
   });
   svg.addEventListener('mouseup',function(e){
@@ -116,23 +112,25 @@ document.addEventListener('DOMContentLoaded', () => {
   tools.appendChild(btn);
   btn.textContent = 'fermion';
   btn.addEventListener('click',function(){
-    const path = new SVG('path',svg).attr({
+    const g = new SVG('g',svg);
+    const path = new SVG('path',g._).attr({
       'd': 'm 0,0 100,0'
     }).style({
       'stroke': '#000000',
       'fill': 'none',
-      'stroke-width': 4,
+      'stroke-width': 3,
       'stroke-linecap': 'round',
       'stroke-linejoin': 'round'
     });
-    path.translate(20,20);
+    g.translate(20,20);
   });
 
   btn = _el('button');
   tools.appendChild(btn);
   btn.textContent = 'arrow';
   btn.addEventListener('click',function(){
-    const path = new SVG('path',svg).attr({
+    const g = new SVG('g',svg);
+    const path = new SVG('path',g._).attr({
       'd': 'm 0,0 -5,2 1,-2 -1,-2 5,2 z'
     }).style({
       'stroke': '#000000',
@@ -141,15 +139,16 @@ document.addEventListener('DOMContentLoaded', () => {
       'stroke-linecap': 'round',
       'stroke-linejoin': 'round'
     });
-    path.translate(20,20);
-    path.scale(2.5);
+    path.scale(2.25);
+    g.translate(20,20);
   });
 
   btn = _el('button');
   tools.appendChild(btn);
   btn.textContent = 'photon';
   btn.addEventListener('click',function(){
-    const path = new SVG('path',svg).attr({
+    const g = new SVG('g',svg);
+    const path = new SVG('path',g._).attr({
       'd': 'm 0,0 c 4.4563,8.6668 6.0438,8.6668 10.5,0 4.4563,-8.6668 6.0438,-8.6668 10.5,0 4.4563,8.6668 6.0438,8.6668 10.5,0 4.4563,-8.6668 6.0438,-8.6668 10.5,0 4.4563,8.6668 6.0441,8.6668 10.5001,0 4.456,-8.6668 6.044,-8.6668 10.5,0 4.456,8.6668 6.044,8.6668 10.5,0 4.456,-8.6668 6.044,-8.6668 10.5,0'
       // 'd': 'M0 50 C 40 10, 60 10, 100 50 C 140 90, 160 90, 200 50 C 240 10, 260 10, 300 50 C 340 90, 360 90, 400 50'
     }).style({
@@ -159,8 +158,8 @@ document.addEventListener('DOMContentLoaded', () => {
       'stroke-linecap': 'round',
       'stroke-linejoin': 'round'
     });
-    path.translate(20,20);
     path.scale(1.5);
+    g.translate(20,20);
   });
 
   _id('tools').appendChild(tools);
