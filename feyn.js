@@ -114,6 +114,25 @@ document.addEventListener('DOMContentLoaded', () => {
     el = null;
   });
 
+  const defs = new SVG('defs',svg)._;
+  const s_arrow = new SVG('symbol',defs).attr({
+    id: 'arrow',
+    // viewBox: '-5.5 -2.5 6 5',
+    // refX: 0, refY: 0,
+    // height: 5
+  // }).style({
+  //   overflow: 'visible'
+  })._;
+  {
+    const arrow = new SVG('path',s_arrow).attr({
+      'd': 'm 0,0 -5,2 q 1.5,-2 0,-4 z'
+    }).style({
+      'fill': '#000000',
+      'stroke-width': 1,
+    });
+    arrow.scale(2);
+  }
+
   const tools = new DocumentFragment();
 
   const div1 = _el('div');
@@ -130,6 +149,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }).style({
       'stroke-width': 3,
     });
+    // const arrow = new SVG('use',g._).attr({
+    //   'href': '#arrow'
+    // });
+    // arrow.translate(103.5);
+    const arrow = new SVG('path',g._).attr({
+      'd': 'm 0,0 -5,2 q 1.5,-2 0,-4 z'
+    }).style({
+      'fill': '#000000',
+      'stroke-width': 1,
+    });
+    arrow.translate(57).scale(2);
     g.translate(20,20);
   });
   div.appendChild(btn);
@@ -141,13 +171,14 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
     const path = new SVG('path',g._).attr({
-      'd': 'm 0,0 -5,2 1,-2 -1,-2 5,2 z'
+      // 'd': 'm 0,0 -5,2 1,-2 -1,-2 z'
+      'd': 'm 0,0 -5,2 q 1.5,-2 0,-4 z'
     }).style({
       'fill': '#000000',
       'stroke-width': 1,
     });
-    path.scale(2.25);
-    g.translate(20,20);
+    path.scale(2);
+    g.translate(10,10);
   });
   div.appendChild(btn);
   div1.appendChild(div);
