@@ -15,12 +15,18 @@ div {
   margin-bottom: 5px;
 }
 
-#tools button:not(:last-child) {
+div.btns > div:not(:last-child) {
+  margin-bottom: 3px;
+}
+div.btns > div > button {
   margin-right: 5px;
 }
 
 .right {
   float: right;
+}
+.btns {
+  display: inline-block;
 }
 
 #canv {
