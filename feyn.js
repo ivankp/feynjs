@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
     const arrow_scale = 1.75;
-    const l = [100,6], s = [2.5,1];
+    const l = [80,6], s = [2.5,1];
     const path = new SVG('path',g._).attr({
       'd': 'm 0,0 '+l[0]+',0'
     }).style({
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.textContent = 'scalar';
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
-    const l = 100, s = 2.5;
+    const l = 80, s = 2.5;
     const r = 1.2; // white / black
     let b, b0;
     for (let i=3; ; ++i) {
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const nosc = _el('input');
   nosc.id = 'nosc';
   nosc.type = 'text';
-  nosc.value = 10;
+  nosc.value = 8;
   nosc.size = 2;
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);

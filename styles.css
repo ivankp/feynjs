@@ -17,6 +17,7 @@ div {
 
 div.left {
   display: inline-block;
+  text-align: left;
 }
 div.left > div:not(:last-child) {
   margin-bottom: 3px;
