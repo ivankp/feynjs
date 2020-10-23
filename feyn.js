@@ -119,9 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const tools = new DocumentFragment();
 
-  const div1 = _el('div');
-  div1.classList.add('btns');
-  tools.appendChild(div1);
+  const left = _el('div');
+  left.classList.add('left');
+  tools.appendChild(left);
 
   let btn = _el('button');
   let div = _el('div');
@@ -145,32 +145,39 @@ document.addEventListener('DOMContentLoaded', () => {
     g.translate(20,20);
   });
   div.appendChild(btn);
-  div1.appendChild(div);
+  left.appendChild(div);
 
   btn = _el('button');
   div = _el('div');
-  btn.textContent = 'arrow';
+  btn.textContent = 'scalar';
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
+    const l = 100, s = 2.5;
+    const r = 1.2; // white / black
+    let b, b0;
+    for (let i=3; ; ++i) {
+      b0 = l/(i+r*(i-1));
+      if (b0 < 7.5) break;
+      b = b0;
+    }
     const path = new SVG('path',g._).attr({
-      'd': 'm 0,0 -5,2 q 1.5,-2 0,-4 z'
+      'd': 'm 0,0 '+l+',0'
     }).style({
-      'fill': '#000000',
-      'stroke-width': 1,
+      'stroke-width': s,
+      'stroke-dasharray': b.toFixed(4)+' '+(r*b).toFixed(4),
     });
-    path.scale(2);
-    g.translate(10,10);
+    g.translate(20,20);
   });
   div.appendChild(btn);
-  div1.appendChild(div);
+  left.appendChild(div);
 
-  btn = _el('button');
   div = _el('div');
+  btn = _el('button');
   btn.textContent = 'photon';
   const nosc = _el('input');
   nosc.id = 'nosc';
   nosc.type = 'text';
-  nosc.value = 8;
+  nosc.value = 10;
   nosc.size = 2;
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
@@ -178,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let d = 'm 0,0 c';
     const a1 = (sin_a*10).toFixed(4),
           a2 = ((1-sin_a)*10).toFixed(4),
-          b  = (sin_b*10).toFixed(4);
+          b  = (sin_b*5).toFixed(4);
     for (let i=0; i<n; ++i) {
       if (i===0) d += ' '+a1+','+(i%2?'':'-')+b;
       else if (i==1) d += ' s';
@@ -193,11 +200,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   div.appendChild(btn);
   div.appendChild(nosc);
-  div1.appendChild(div);
+  left.appendChild(div);
+
+  const right = _el('div');
+  right.classList.add('right');
+  tools.appendChild(right);
 
   const dummy_a = _el('a');
+  div = _el('div');
   btn = _el('button');
-  btn.classList.add('right');
   btn.textContent = 'save';
   btn.addEventListener('click',function(){
     dummy_a.href = URL.createObjectURL(new Blob(
@@ -207,8 +218,24 @@ document.addEventListener('DOMContentLoaded', () => {
     ));
     dummy_a.download = 'feyn.svg';
     dummy_a.click();
+
+    // TODO: auto crop
+    // svg.querySelectorAll('svg > g').forEach(g => {
+    //   console.log(g.getBBox());
+    // });
   });
-  tools.appendChild(btn);
+  div.appendChild(btn);
+  right.appendChild(div);
+
+  div = _el('div');
+  btn = _el('button');
+  btn.textContent = 'clear';
+  btn.addEventListener('click',function(){
+    for (let x; x = svg.firstChild; )
+      svg.removeChild(x);
+  });
+  div.appendChild(btn);
+  right.appendChild(div);
 
   const tools_el = _id('tools');
   tools_el.appendChild(tools);

@@ -15,18 +15,22 @@ div {
   margin-bottom: 5px;
 }
 
-div.btns > div:not(:last-child) {
+div.left {
+  display: inline-block;
+}
+div.left > div:not(:last-child) {
   margin-bottom: 3px;
 }
-div.btns > div > button {
+div.left > div > :not(:last-child) {
   margin-right: 5px;
 }
 
-.right {
+div.right {
   float: right;
+  text-align: right;
 }
-.btns {
-  display: inline-block;
+div.right > div:not(:last-child) {
+  margin-bottom: 3px;
 }
 
 #canv {
