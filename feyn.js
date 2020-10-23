@@ -213,7 +213,10 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.addEventListener('click',function(){
     dummy_a.href = URL.createObjectURL(new Blob(
       [ '<?xml version="1.0" encoding="UTF-8" ?>\n',
-        svg.outerHTML.replace(/^<svg/,'$& xmlns="'+svg.namespaceURI+'"') ],
+        svg.outerHTML
+        .replace(/^<svg/,'$& xmlns="'+svg.namespaceURI+'"')
+        .replace(/<([^ <>\t]+)([^>]*)>\s*<\/\1>/g,'<$1$2/>')
+      ],
       { type:"image/svg+xml;charset=utf-8" }
     ));
     dummy_a.download = 'feyn.svg';
