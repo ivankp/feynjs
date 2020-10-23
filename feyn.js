@@ -35,6 +35,9 @@ for (const [name,type,f] of [
   }],
   ['scale', SVGTransform.SVG_TRANSFORM_SCALE, (xf,x,y) => {
     xf.setScale(x||0,y||x||0);
+  }],
+  ['rotate', SVGTransform.SVG_TRANSFORM_ROTATE, (xf,a,cx,cy) => {
+    xf.setRotate(a,cx||0,cy||0);
   }]
 ]) {
   SVG.prototype[name] = function() {
@@ -114,25 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
     el = null;
   });
 
-  const defs = new SVG('defs',svg)._;
-  const s_arrow = new SVG('symbol',defs).attr({
-    id: 'arrow',
-    // viewBox: '-5.5 -2.5 6 5',
-    // refX: 0, refY: 0,
-    // height: 5
-  // }).style({
-  //   overflow: 'visible'
-  })._;
-  {
-    const arrow = new SVG('path',s_arrow).attr({
-      'd': 'm 0,0 -5,2 q 1.5,-2 0,-4 z'
-    }).style({
-      'fill': '#000000',
-      'stroke-width': 1,
-    });
-    arrow.scale(2);
-  }
-
   const tools = new DocumentFragment();
 
   const div1 = _el('div');
@@ -144,22 +128,20 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.textContent = 'fermion';
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
+    const arrow_scale = 1.75;
+    const l = [100,6], s = [2.5,1];
     const path = new SVG('path',g._).attr({
-      'd': 'm 0,0 100,0'
+      'd': 'm 0,0 '+l[0]+',0'
     }).style({
-      'stroke-width': 3,
+      'stroke-width': s[0]
     });
-    // const arrow = new SVG('use',g._).attr({
-    //   'href': '#arrow'
-    // });
-    // arrow.translate(103.5);
     const arrow = new SVG('path',g._).attr({
-      'd': 'm 0,0 -5,2 q 1.5,-2 0,-4 z'
+      'd': 'm 0,0 -'+l[1]+',2 q 1.5,-2 0,-4 z'
     }).style({
       'fill': '#000000',
-      'stroke-width': 1,
+      'stroke-width': s[1]
     });
-    arrow.translate(57).scale(2);
+    arrow.translate(((l[1]+s[1])*arrow_scale+l[0])/2).scale(arrow_scale);
     g.translate(20,20);
   });
   div.appendChild(btn);
@@ -171,7 +153,6 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
     const path = new SVG('path',g._).attr({
-      // 'd': 'm 0,0 -5,2 1,-2 -1,-2 z'
       'd': 'm 0,0 -5,2 q 1.5,-2 0,-4 z'
     }).style({
       'fill': '#000000',
@@ -189,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const nosc = _el('input');
   nosc.id = 'nosc';
   nosc.type = 'text';
-  nosc.value = 4;
+  nosc.value = 8;
   nosc.size = 2;
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
@@ -206,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const path = new SVG('path',g._).attr({
       'd': d
     }).style({
-      'stroke-width': 3,
+      'stroke-width': 2.5,
     });
     g.translate(20,20);
   });
