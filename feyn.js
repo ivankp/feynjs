@@ -1,8 +1,11 @@
 // http://www.petercollingridge.co.uk/tutorials/svg/interactive/dragging/
 // https://developer.mozilla.org/en-US/docs/Web/API/SVGTransformList
 
+function make(tag,p) {
+  const x = document.createElement(tag);
+  return p ? p.appendChild(x) : x;
+}
 function _id(id) { return document.getElementById(id); }
-function _el(tag) { return document.createElement(tag); }
 
 const sin_a = 0.41033104341626886;
 const sin_b = 1.3358374629527159;
@@ -119,12 +122,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const tools = new DocumentFragment();
 
-  const left = _el('div');
+  const left = make('div',tools);
   left.classList.add('left');
-  tools.appendChild(left);
 
-  let btn = _el('button');
-  let div = _el('div');
+  let div = make('div',left);
+  let btn = make('button',div);
   btn.textContent = 'fermion';
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
@@ -144,11 +146,9 @@ document.addEventListener('DOMContentLoaded', () => {
     arrow.translate(((l[1]+s[1])*arrow_scale+l[0])/2).scale(arrow_scale);
     g.translate(20,20);
   });
-  div.appendChild(btn);
-  left.appendChild(div);
 
-  btn = _el('button');
-  div = _el('div');
+  div = make('div',left);
+  btn = make('button',div);
   btn.textContent = 'scalar';
   btn.addEventListener('click',function(){
     const g = new SVG('g',svg);
@@ -168,14 +168,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     g.translate(20,20);
   });
-  div.appendChild(btn);
-  left.appendChild(div);
 
-  div = _el('div');
-  btn = _el('button');
+  div = make('div',left);
+  btn = make('button',div);
   btn.textContent = 'photon';
-  const nosc = _el('input');
-  nosc.id = 'nosc';
+  const nosc = make('input',div);
   nosc.type = 'text';
   nosc.value = 8;
   nosc.size = 2;
@@ -198,17 +195,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     g.translate(20,20);
   });
-  div.appendChild(btn);
-  div.appendChild(nosc);
-  left.appendChild(div);
 
-  const right = _el('div');
+  const right = make('div',tools);
   right.classList.add('right');
-  tools.appendChild(right);
 
-  const dummy_a = _el('a');
-  div = _el('div');
-  btn = _el('button');
+  const dummy_a = make('a');
+  btn = make('button',make('div',right));
+  btn.id = 'save';
   btn.textContent = 'save';
   btn.addEventListener('click',function(){
     dummy_a.href = URL.createObjectURL(new Blob(
@@ -227,20 +220,22 @@ document.addEventListener('DOMContentLoaded', () => {
     //   console.log(g.getBBox());
     // });
   });
-  div.appendChild(btn);
-  right.appendChild(div);
 
-  div = _el('div');
-  btn = _el('button');
+  btn = make('button',make('div',right));
   btn.textContent = 'clear';
   btn.addEventListener('click',function(){
     for (let x; x = svg.firstChild; )
       svg.removeChild(x);
   });
-  div.appendChild(btn);
-  right.appendChild(div);
 
   const tools_el = _id('tools');
   tools_el.appendChild(tools);
-  tools_el.style.width = _id('canv').offsetWidth+'px'
+  tools_el.style.width = _id('canv').offsetWidth+'px';
+});
+
+window.addEventListener('keydown', function(e) { // Ctrl + s
+  e.preventDefault();
+  if ( e.ctrlKey && !(e.shiftKey || e.altKey || e.metaKey)
+    && ((e.which || e.keyCode) === 83)
+  ) _id('save').click();
 });
