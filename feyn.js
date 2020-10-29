@@ -209,11 +209,11 @@ document.addEventListener('DOMContentLoaded', () => {
         svg.outerHTML
         .replace(/^<svg\s*([^>]*)>/, (m,_1) =>
           // add xml namespace
-          '<svg xmlns="'+svg.namespaceURI+'" '+
-            // adjust viewBox to crop
-            _1.replace(/(viewBox=")[^"]+/, (m,_1) => _1+bb.join(' '))
-              .replace(/(width=")[^"]+/, (m,_1) => _1+bb[2])
-              .replace(/(height=")[^"]+/, (m,_1) => _1+bb[3])
+          '<svg xmlns="'+svg.namespaceURI+'" '+ _1
+          // adjust viewBox to crop
+          .replace(/(viewBox=")[^"]+/, (m,_1) => _1+bb.join(' '))
+          // remove width and height
+          .replace(/\s*(?:width|height)="[^"]+"/g,'')
           +'>'
         )
         // self-closing tags
