@@ -1,38 +1,34 @@
 // http://www.petercollingridge.co.uk/tutorials/svg/interactive/dragging/
 // https://developer.mozilla.org/en-US/docs/Web/API/SVGTransformList
 
+const sin_a = 0.41033104341626886;
+const sin_b = 1.3358374629527159;
+const save_padding = 5;
+
 function make(tag,p) {
   const x = document.createElement(tag);
   return p ? p.appendChild(x) : x;
 }
 function _id(id) { return document.getElementById(id); }
 
-const sin_a = 0.41033104341626886;
-const sin_b = 1.3358374629527159;
-const save_padding = 5;
-
-class SVG {
-  constructor(tag,p) {
-    this._ = document.createElementNS('http://www.w3.org/2000/svg',tag);
-    if (p) p.appendChild(this._);
+function SVG(tag,p,attr,style) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg',tag);
+  if (p) p.appendChild(el);
+  if (attr) {
+    if (attr.constructor === Object) {
+      for (const [key,val] of Object.entries(attr))
+        el.setAttributeNS(null,key,val);
+    } else if (attr.constructor === String) {
+      el.setAttributeNS(null,'d',attr);
+    }
   }
-  attr(arg,v) {
-    if (arg instanceof Object)
-      for (const [key,val] of Object.entries(arg))
-        this._.setAttributeNS(null,key,val);
-    else if (v) this._.setAttributeNS(null,arg,v);
-    else return this._.getAttributeNS(null,arg);
-    return this;
+  if (style && style.constructor === Object) {
+    for (const [key,val] of Object.entries(style))
+      el.style[key] = val;
   }
-  style(arg,v) {
-    if (arg instanceof Object)
-      for (const [key,val] of Object.entries(arg))
-        this._.style[key] = val;
-    else if (v) this._.style[arg] = v;
-    else return this._.style[arg];
-    return this;
-  }
+  return el;
 }
+
 for (const [name,type,f] of [
   ['translate', SVGTransform.SVG_TRANSFORM_TRANSLATE, (xf,x,y) => {
     xf.setTranslate(x||0,y||0);
@@ -44,8 +40,8 @@ for (const [name,type,f] of [
     xf.setRotate(a,cx||0,cy||0);
   }]
 ]) {
-  SVG.prototype[name] = function() {
-    const xfs = this._.transform.baseVal;
+  window[name] = function(el,...args) {
+    const xfs = el.transform.baseVal;
     const n = xfs.numberOfItems;
     let xf;
     for (let i=0; i<n; ++i) {
@@ -54,26 +50,25 @@ for (const [name,type,f] of [
       xf = null;
     }
     if (xf) {
-      f(xf,...arguments);
+      f(xf,...args);
     } else {
-      xf = this._.ownerSVGElement.createSVGTransform();
-      f(xf,...arguments);
+      xf = el.ownerSVGElement.createSVGTransform();
+      f(xf,...args);
       xfs.appendItem(xf);
     }
-    return arguments.length ? this : xf;
+    return args.length ? el : xf;
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const svg = new SVG('svg',_id('canv')).attr({
-    viewBox: '0 0 500 500', width: 500, height: 500,
-    'shape-rendering': 'geometricPrecision'
-  }).style({
-    'stroke': '#000000',
+  const svg = SVG('svg',_id('canv'),{
+    viewBox: '0 0 500 500', width: 500, height: 500
+  },{
+    'stroke': '#000',
     'fill': 'none',
     'stroke-linecap': 'round',
     'stroke-linejoin': 'round'
-  })._;
+  });
 
   function pos(e) {
     const cmt = svg.getScreenCTM();
@@ -130,29 +125,30 @@ document.addEventListener('DOMContentLoaded', () => {
   let btn = make('button',div);
   btn.textContent = 'fermion';
   btn.addEventListener('click',function(){
-    const g = new SVG('g',svg);
+    const g = SVG('g',svg);
     const arrow_scale = 1.75;
     const l = [80,6], s = [2.5,1];
-    const path = new SVG('path',g._).attr({
-      'd': 'm 0,0 '+l[0]+',0'
-    }).style({
+    const path = SVG('path',g,
+      'm 0,0 '+l[0]+',0',
+    {
       'stroke-width': s[0]
     });
-    const arrow = new SVG('path',g._).attr({
-      'd': 'm 0,0 -'+l[1]+',2 q 1.5,-2 0,-4 z'
-    }).style({
+    const arrow = SVG('path',g,
+      'm 0,0 -'+l[1]+',2 q 1.5,-2 0,-4 z',
+    {
       'fill': '#000000',
       'stroke-width': s[1]
     });
-    arrow.translate(((l[1]+s[1])*arrow_scale+l[0])/2).scale(arrow_scale);
-    g.translate(20,20);
+    translate(arrow,((l[1]+s[1])*arrow_scale+l[0])/2);
+    scale(arrow,arrow_scale);
+    translate(g,20,20);
   });
 
   div = make('div',left);
   btn = make('button',div);
   btn.textContent = 'scalar';
   btn.addEventListener('click',function(){
-    const g = new SVG('g',svg);
+    const g = SVG('g',svg);
     const l = 80, s = 2.5;
     const r = 1.2; // white / black
     let b, b0;
@@ -161,13 +157,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (b0 < 7.5) break;
       b = b0;
     }
-    const path = new SVG('path',g._).attr({
-      'd': 'm 0,0 '+l+',0'
-    }).style({
+    const path = SVG('path',g,
+      'm 0,0 '+l+',0',
+    {
       'stroke-width': s,
       'stroke-dasharray': b.toFixed(4)+' '+(r*b).toFixed(4),
     });
-    g.translate(20,20);
+    translate(g,20,20);
   });
 
   div = make('div',left);
@@ -178,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
   nosc.value = 8;
   nosc.size = 2;
   btn.addEventListener('click',function(){
-    const g = new SVG('g',svg);
+    const g = SVG('g',svg);
     const n = nosc.value;
     let d = 'm 0,0 c';
     const a1 = (sin_a*10).toFixed(4),
@@ -189,12 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (i==1) d += ' s';
       d += ' '+a2+','+(i%2?'':'-')+b + ' '+(10)+','+(0);
     }
-    const path = new SVG('path',g._).attr({
-      'd': d
-    }).style({
-      'stroke-width': 2.5,
-    });
-    g.translate(20,20);
+    const path = SVG('path',g,d,{ 'stroke-width': 2.5 });
+    translate(g,20,20);
   });
 
   const right = make('div',tools);
