@@ -9,6 +9,7 @@ function _id(id) { return document.getElementById(id); }
 
 const sin_a = 0.41033104341626886;
 const sin_b = 1.3358374629527159;
+const save_padding = 5;
 
 class SVG {
   constructor(tag,p) {
@@ -204,21 +205,31 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.id = 'save';
   btn.textContent = 'save';
   btn.addEventListener('click',function(){
+    let bb = svg.getBBox();
+    bb = [ bb.x, bb.y, bb.width, bb.height ].map(x => Math.round(x));
+    bb[0] -= save_padding;
+    bb[1] -= save_padding;
+    bb[2] += save_padding*2;
+    bb[3] += save_padding*2;
+
     dummy_a.href = URL.createObjectURL(new Blob(
-      [ '<?xml version="1.0" encoding="UTF-8" ?>\n',
+      [ '<?xml version="1.0" encoding="UTF-8"?>\n',
         svg.outerHTML
+        // add xml namespace
         .replace(/^<svg/,'$& xmlns="'+svg.namespaceURI+'"')
+        // adjust viewBox to crop
+        .replace(/(viewBox=")[^"]+/,'$1'+bb.join(' '))
+        .replace(/(width=")[^"]+/,'$1'+bb[2])
+        .replace(/(height=")[^"]+/,'$1'+bb[3])
+        // self-closing tags
         .replace(/<([^ <>\t]+)([^>]*)>\s*<\/\1>/g,'<$1$2/>')
+        // scale with single argument
+        .replace(/scale\(([+-]?\d+(?:\.\d*)?)\s*,?\s*\1\)/g,'scale($1)')
       ],
       { type:"image/svg+xml;charset=utf-8" }
     ));
     dummy_a.download = 'feyn.svg';
     dummy_a.click();
-
-    // TODO: auto crop
-    // svg.querySelectorAll('svg > g').forEach(g => {
-    //   console.log(g.getBBox());
-    // });
   });
 
   btn = make('button',make('div',right));
@@ -234,8 +245,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener('keydown', function(e) { // Ctrl + s
-  e.preventDefault();
   if ( e.ctrlKey && !(e.shiftKey || e.altKey || e.metaKey)
     && ((e.which || e.keyCode) === 83)
-  ) _id('save').click();
+  ) {
+    e.preventDefault();
+    _id('save').click();
+  }
 });
