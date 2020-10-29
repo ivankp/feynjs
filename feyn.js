@@ -215,14 +215,27 @@ document.addEventListener('DOMContentLoaded', () => {
     dummy_a.href = URL.createObjectURL(new Blob(
       [ '<?xml version="1.0" encoding="UTF-8"?>\n',
         svg.outerHTML
-        // add xml namespace
-        .replace(/^<svg/,'$& xmlns="'+svg.namespaceURI+'"')
-        // adjust viewBox to crop
-        .replace(/(viewBox=")[^"]+/,'$1'+bb.join(' '))
-        .replace(/(width=")[^"]+/,'$1'+bb[2])
-        .replace(/(height=")[^"]+/,'$1'+bb[3])
+        .replace(/^<svg\s*([^>]*)>/, (m,_1) =>
+          // add xml namespace
+          '<svg xmlns="'+svg.namespaceURI+'" '+
+            // adjust viewBox to crop
+            _1.replace(/(viewBox=")[^"]+/, (m,_1) => _1+bb.join(' '))
+              .replace(/(width=")[^"]+/, (m,_1) => _1+bb[2])
+              .replace(/(height=")[^"]+/, (m,_1) => _1+bb[3])
+          +'>'
+        )
         // self-closing tags
         .replace(/<([^ <>\t]+)([^>]*)>\s*<\/\1>/g,'<$1$2/>')
+        // terse style
+        .replace(/(style=")([^"]+)/g, (m,_1,_2) =>
+          _1 + _2
+          .replace(/\s*:\s*/g,':')
+          // hex colors
+          .replace(/:rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/g,
+            (m,_1,_2,_3) => [_1,_2,_3].reduce( (a,x) =>
+              a+Math.round(parseFloat(x)).toString(16).padStart(2,'0'), ':#')
+          )
+        )
         // scale with single argument
         .replace(/scale\(([+-]?\d+(?:\.\d*)?)\s*,?\s*\1\)/g,'scale($1)')
       ],
