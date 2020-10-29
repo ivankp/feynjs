@@ -38,3 +38,8 @@ div.right > div:not(:last-child) {
   border: 1px solid black;
   display: inline-block;
 }
+
+svg .ghost {
+  stroke-width: 10;
+  opacity: 0;
+}

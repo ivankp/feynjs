@@ -11,7 +11,7 @@ function make(tag,p) {
 }
 function _id(id) { return document.getElementById(id); }
 
-function SVG(tag,p,attr,style) {
+function SVG(tag,p,attr,style,classes) {
   const el = document.createElementNS('http://www.w3.org/2000/svg',tag);
   if (p) p.appendChild(el);
   if (attr) {
@@ -25,6 +25,13 @@ function SVG(tag,p,attr,style) {
   if (style && style.constructor === Object) {
     for (const [key,val] of Object.entries(style))
       el.style[key] = val;
+  }
+  // if (id) el.id = id;
+  if (classes) {
+    if (classes.constructor === String)
+      el.classList.add(classes);
+    else if (classes.constructor === Array)
+      el.classList.add(...classes);
   }
   return el;
 }
@@ -65,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     viewBox: '0 0 500 500', width: 500, height: 500
   },{
     'stroke': '#000',
+    'stroke-width': 2.5,
     'fill': 'none',
     'stroke-linecap': 'round',
     'stroke-linejoin': 'round'
@@ -127,18 +135,15 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.addEventListener('click',function(){
     const g = SVG('g',svg);
     const arrow_scale = 1.75;
-    const l = [80,6], s = [2.5,1];
-    const path = SVG('path',g,
-      'm 0,0 '+l[0]+',0',
-    {
-      'stroke-width': s[0]
-    });
-    const arrow = SVG('path',g,
-      'm 0,0 -'+l[1]+',2 q 1.5,-2 0,-4 z',
-    {
-      'fill': '#000000',
+    const l = [80,6], s = [,1];
+    const d = 'm 0,0 '+l[0]+',0';
+    SVG('path',g,d);
+    const arrow = SVG('path',g,{
+      d: 'm 0,0 -'+l[1]+',2 q 1.5,-2 0,-4 z',
+      'fill': '#000',
       'stroke-width': s[1]
     });
+    SVG('path',g,d,null,'ghost');
     translate(arrow,((l[1]+s[1])*arrow_scale+l[0])/2);
     scale(arrow,arrow_scale);
     translate(g,20,20);
@@ -149,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.textContent = 'scalar';
   btn.addEventListener('click',function(){
     const g = SVG('g',svg);
-    const l = 80, s = 2.5;
+    const l = 80;
     const r = 1.2; // white / black
     let b, b0;
     for (let i=3; ; ++i) {
@@ -157,12 +162,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (b0 < 7.5) break;
       b = b0;
     }
-    const path = SVG('path',g,
-      'm 0,0 '+l+',0',
-    {
-      'stroke-width': s,
+    const d = 'm 0,0 '+l+',0';
+    SVG('path',g,{ d,
       'stroke-dasharray': b.toFixed(4)+' '+(r*b).toFixed(4),
     });
+    SVG('path',g,d,null,'ghost');
     translate(g,20,20);
   });
 
@@ -185,7 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (i==1) d += ' s';
       d += ' '+a2+','+(i%2?'':'-')+b + ' '+(10)+','+(0);
     }
-    const path = SVG('path',g,d,{ 'stroke-width': 2.5 });
+    SVG('path',g,d);
+    SVG('path',g,d,null,'ghost');
     translate(g,20,20);
   });
 
@@ -204,9 +209,12 @@ document.addEventListener('DOMContentLoaded', () => {
     bb[2] += save_padding*2;
     bb[3] += save_padding*2;
 
+    const clone = svg.cloneNode(true);
+    clone.querySelectorAll('.ghost').forEach(x => x.remove());
+
     dummy_a.href = URL.createObjectURL(new Blob(
       [ '<?xml version="1.0" encoding="UTF-8"?>\n',
-        svg.outerHTML
+        clone.outerHTML
         .replace(/^<svg\s*([^>]*)>/, (m,_1) =>
           // add xml namespace
           '<svg xmlns="'+svg.namespaceURI+'" '+ _1
