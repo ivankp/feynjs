@@ -86,9 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let p0, el, tr, bnd;
 
-  ['mousedown','touchstart'].forEach(e => {
+  ['mousedown','touchstart'].forEach((e,ei) => {
     svg.addEventListener(e,function(e){
-      e.preventDefault();
+      if (ei===0) e.preventDefault();
       el = null;
       for (const x of e.composedPath()) {
         if (x!==svg) el = x;
