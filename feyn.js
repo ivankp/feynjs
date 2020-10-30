@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function pos(e) {
     const cmt = svg.getScreenCTM();
+    if (e.touches) e = e.touches[0];
     return [ (e.clientX-cmt.e)/cmt.a, (e.clientY-cmt.f)/cmt.d ];
   }
 
