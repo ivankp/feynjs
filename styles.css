@@ -34,9 +34,18 @@ div.right > div:not(:last-child) {
   margin-bottom: 3px;
 }
 
+#main {
+  display: inline-block;
+  float: left;
+}
 #canv {
   border: 1px solid black;
   display: inline-block;
+}
+#info {
+  display: inline-block;
+  min-width: 500px;
+  margin: 20px;
 }
 
 svg .ghost {

@@ -85,43 +85,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let p0, el, tr, bnd;
 
-  svg.addEventListener('mousedown',function(e){
-    e.preventDefault();
-    el = null;
-    for (const x of e.composedPath()) {
-      if (x!==svg) el = x;
-      else break;
-    }
-    if (el) {
-      p0 = pos(e);
-      tr = el.transform.baseVal.getItem(0);
-      p0[0] -= tr.matrix.e;
-      p0[1] -= tr.matrix.f;
-      const b = el.getBBox(), v = svg.viewBox.baseVal;
-      bnd = [
-        v.x - b.x,
-        v.width - b.x - b.width,
-        v.y - b.y,
-        v.height - b.y - b.height
-      ];
-    }
+  ['mousedown','touchstart'].forEach(e => {
+    svg.addEventListener(e,function(e){
+      e.preventDefault();
+      el = null;
+      for (const x of e.composedPath()) {
+        if (x!==svg) el = x;
+        else break;
+      }
+      if (el) {
+        p0 = pos(e);
+        tr = el.transform.baseVal.getItem(0);
+        p0[0] -= tr.matrix.e;
+        p0[1] -= tr.matrix.f;
+        const b = el.getBBox(), v = svg.viewBox.baseVal;
+        bnd = [
+          v.x - b.x,
+          v.width - b.x - b.width,
+          v.y - b.y,
+          v.height - b.y - b.height
+        ];
+      }
+    });
   });
-  svg.addEventListener('mousemove',function(e){
-    if (el) {
-      const p = pos(e);
-      let x = p[0]-p0[0], y = p[1]-p0[1];
-      if (x < bnd[0]) x = bnd[0];
-      else if (x > bnd[1]) x = bnd[1];
-      if (y < bnd[2]) y = bnd[2];
-      else if (y > bnd[3]) y = bnd[3];
-      tr.setTranslate(x,y);
-    }
+  ['mousemove','touchmove'].forEach(e => {
+    svg.addEventListener(e,function(e){
+      if (el) {
+        const p = pos(e);
+        let x = p[0]-p0[0], y = p[1]-p0[1];
+        if (x < bnd[0]) x = bnd[0];
+        else if (x > bnd[1]) x = bnd[1];
+        if (y < bnd[2]) y = bnd[2];
+        else if (y > bnd[3]) y = bnd[3];
+        tr.setTranslate(x,y);
+      }
+    });
   });
-  svg.addEventListener('mouseup',function(e){
-    el = null;
-  });
-  svg.addEventListener('mouseleave',function(e){
-    el = null;
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(e => {
+    svg.addEventListener(e,function(e){
+      el = null;
+    });
   });
 
   const tools = new DocumentFragment();
