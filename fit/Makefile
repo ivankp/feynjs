@@ -10,8 +10,10 @@ L_fit := -lfmt
 
 all: $(EXE)
 
+fit: linalg.hh linalg.cc wls.hh wls.cc
+
 %: %.cc
-	g++ $(CPPFLAGS) $(CXXFLAGS) -o $@ $< $(L_$*)
+	g++ $(CPPFLAGS) $(CXXFLAGS) -o $@ $(filter %.cc,$^) $(L_$*)
 
 clean:
 	@rm -fv $(EXE)

@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <stdexcept>
 #include <fmt/core.h>
+#include "wls.hh"
 
 using std::cout;
 using std::cerr;
@@ -92,8 +93,10 @@ int main(int argc, char* argv[]) {
     verbose = (argc>3 ? atoi(argv[3]) : 0);
 
   point *const xy1 = new point[nt+1],
-        *const xy2 = new point[nt+1],
-        *const ga  = new point[ng+1];
+        *const xy2 = new point[nt+1];
+
+  double *const gs = new double[(ng+1)*2],
+         *const as = gs + (ng+1);
 
   const double dg = 2./ng;
   for (unsigned gi=0; gi<=ng; ++gi) {
@@ -175,19 +178,36 @@ int main(int argc, char* argv[]) {
     if (verbose > 1)
       cout << format("\ng = {:.8e}, a = {:.8e}\n\n",g,a);
 
-    ga[gi] = { g, a };
+    gs[gi] = g;
+    as[gi] = a;
   }
 
   if (verbose > 0) {
     cout << '{';
     for (unsigned gi=0; gi<=ng; ++gi) {
       if (gi) cout << ',';
-      cout << format("{{{:.2f},{:.8f}}}",ga[gi].x,ga[gi].y);
+      cout << format("{{{:.2f},{:.8f}}}",gs[gi],as[gi]);
     }
-    cout << "}\n";
+    cout << "}\n\n";
   }
+
+  // fit f: g -> a
+  double cs[2];
+  const unsigned nc = std::size(cs);
+  double * const A = new double[(ng+1)*nc];
+  { double* a = A;
+    for (unsigned i=0; i<=ng; ++i)
+      *a++ = 1;
+    for (unsigned i=0; i<=ng; ++i)
+      *a++ = gs[i];
+  }
+
+  ivanp::wls(A, as, nullptr, ng+1, nc, cs);
+
+  cout << format("a0 = {:.12f}\na' = {:.12f}\n",cs[0],cs[1]);
 
   delete[] xy1;
   delete[] xy2;
-  delete[] ga;
+  delete[] gs;
+  delete[] A;
 }
