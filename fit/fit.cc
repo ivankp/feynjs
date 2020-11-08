@@ -8,6 +8,7 @@
 #include <fmt/core.h>
 
 using std::cout;
+using std::cerr;
 using std::endl;
 using std::numbers::pi;
 using fmt::format;
@@ -61,8 +62,10 @@ struct brent {
       dx2 = x0 - x2,
       df1 = f0 - f1,
       df2 = f0 - f2,
-      m = x0 - 0.5*( dx1*dx1*df2 - dx2*dx2*df1 )/( dx1*df2 - dx2*df1 );
-    if (!( x1 <= m && m <= x2 )) throw std::range_error(format(
+      dx1df2 = dx1*df2,
+      dx2df1 = dx2*df1,
+      m = x0 - 0.5*( dx1*dx1df2 - dx2*dx2df1 )/( dx1df2 - dx2df1 );
+    if (m < x1 || x2 < m) throw std::range_error(format(
       "minimum abscissa {:.8e} out of range [{:.8e}, {:.8e}]", m, x1, x2));
     if (m < x0) {
       x2 = x0;
@@ -76,18 +79,17 @@ struct brent {
 };
 
 template <typename F>
-brent(F&&,...) -> brent<std::decay_t<F>>;
+brent(F&&,...) -> brent<std::remove_reference_t<F>>;
 
 int main(int argc, char* argv[]) {
   if (argc < 3) {
-    cout << "usage: " << argv[0] << " nt ng [-v]\n";
+    cout << "usage: " << argv[0] << " nt ng [verbose (0,1,2)]\n";
     return 1;
   }
   const unsigned
     nt = atoi(argv[1]),
-    ng = atoi(argv[2]);
-
-  const bool verbose = argc > 3 && !strcmp(argv[3],"-v");
+    ng = atoi(argv[2]),
+    verbose = (argc>3 ? atoi(argv[3]) : 0);
 
   point *const xy1 = new point[nt+1],
         *const xy2 = new point[nt+1],
@@ -138,18 +140,21 @@ int main(int argc, char* argv[]) {
       return chi2;
     }, 0.2, 0., 0.5);
 
-    if (verbose)
+    if (verbose > 1)
       cout << format("{:>5} [{:14}, {:14}] {:14} {}\n",
               "iter", "lower", "upper", "min", "l - u");
 
     double a = std::numeric_limits<double>::quiet_NaN();
+    const unsigned max_iter = 100;
     for (unsigned iter=0; ; ++iter) {
-      if (verbose)
+      if (verbose > 1)
         cout << format("{:>5} [{:.8e}, {:.8e}] {:.8e} {:.8e}\n",
                 iter, m.x1, m.x2, m.x0, m.x2-m.x1);
 
-      if (m.x2-m.x1 < 1e-8 || std::abs(a-m.x0) < 1e-9 || iter >= 1000) {
+      if (std::abs(a-m.x0) < 1e-8 || iter > max_iter) {
         a = m.x0;
+        if (iter > max_iter)
+          cerr << "exceeded maximum number of iterations" << endl;
         break;
       }
 
@@ -157,9 +162,8 @@ int main(int argc, char* argv[]) {
       try {
         m();
       } catch (const std::range_error& e) {
-        if (verbose)
+        if (verbose > 1)
           cout << e.what() << endl;
-        // break;
         if (m.x0 < m.x1) {
           m.x1 = 2*m.x0-m.x2;
         } else {
@@ -168,18 +172,20 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    if (verbose)
+    if (verbose > 1)
       cout << format("\ng = {:.8e}, a = {:.8e}\n\n",g,a);
 
     ga[gi] = { g, a };
   }
 
-  cout << '{';
-  for (unsigned gi=0; gi<=ng; ++gi) {
-    if (gi) cout << ',';
-    cout << format("{{{:.2f},{:.8f}}}",ga[gi].x,ga[gi].y);
+  if (verbose > 0) {
+    cout << '{';
+    for (unsigned gi=0; gi<=ng; ++gi) {
+      if (gi) cout << ',';
+      cout << format("{{{:.2f},{:.8f}}}",ga[gi].x,ga[gi].y);
+    }
+    cout << "}\n";
   }
-  cout << "}\n";
 
   delete[] xy1;
   delete[] xy2;
