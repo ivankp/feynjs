@@ -6,7 +6,8 @@ CXXFLAGS := -Wall -O3 -flto -fmax-errors=3
 
 EXE := fit
 
-L_fit := -lgsl -lgslcblas -lfmt
+# L_fit := -lgsl -lgslcblas -lfmt
+L_fit := -lfmt
 
 all: $(EXE)
 

@@ -1,12 +1,10 @@
 #include <iostream>
 #include <cmath>
 #include <numbers>
+#include <limits>
 #include <type_traits>
+#include <stdexcept>
 #include <fmt/core.h>
-
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_min.h>
 
 using std::cout;
 using std::endl;
@@ -47,36 +45,37 @@ struct point {
 };
 
 template <typename F>
-class minimizer {
+struct brent {
   F f;
-  gsl_min_fminimizer * const s;
-  gsl_function g;
-  static double wrap(double x, void* f) {
-    return (*reinterpret_cast<F*>(f))(x);
-  }
-public:
-  template <typename T>
-  minimizer(
-    T&& f, const gsl_min_fminimizer_type* t,
-    double x0, double x_lower, double x_upper
-  ): f(std::forward<T>(f)), s(gsl_min_fminimizer_alloc(t)) {
-    g.function = &wrap;
-    g.params = &f;
-    gsl_min_fminimizer_set(s, &g, x0, x_lower, x_upper);
-  }
-  ~minimizer() {
-    gsl_min_fminimizer_free(s);
-  }
+  double x0, x1, x2, f0, f1, f2;
 
-  auto name   () { return gsl_min_fminimizer_name(s); }
-  auto iterate() { return gsl_min_fminimizer_iterate(s); }
-  auto minimum() { return gsl_min_fminimizer_x_minimum(s); }
-  auto lower  () { return gsl_min_fminimizer_x_lower(s); }
-  auto upper  () { return gsl_min_fminimizer_x_upper(s); }
+  template <typename T>
+  brent(T&& f, double x0, double x1, double x2)
+  : f(std::forward<T>(f)), x0(x0), x1(x1), x2(x2), f1(f(x1)), f2(f(x2))
+  { }
+  void operator()() {
+    f0 = f(x0);
+    const double
+      dx1 = x0 - x1,
+      dx2 = x0 - x2,
+      df1 = f0 - f1,
+      df2 = f0 - f2,
+      m = x0 - 0.5*( dx1*dx1*df2 - dx2*dx2*df1 )/( dx1*df2 - dx2*df1 );
+    if (!( x1 <= m && m <= x2 )) throw std::range_error(format(
+      "minimum abscissa {:.8e} out of range [{:.8e}, {:.8e}]", m, x1, x2));
+    if (m < x0) {
+      x2 = x0;
+      f2 = f0;
+    } else {
+      x1 = x0;
+      f1 = f0;
+    }
+    x0 = m;
+  }
 };
 
 template <typename F>
-minimizer(F&&,...) -> minimizer<std::decay_t<F>>;
+brent(F&&,...) -> brent<std::decay_t<F>>;
 
 int main(int argc, char* argv[]) {
   const double
@@ -98,64 +97,48 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  double a1=0.3, a2=0.5, a=(a1+a2)/2;
+  brent m([=](double a){
+    const double tmax = 0.5, dt = tmax/nt;
+    for (unsigned i=0; i<=nt; ++i) {
+      auto& xy = xy2[i];
+      const double t = dt*i;
+      xy.x = bezx(t,a);
+      xy.y = bezy(t);
+    }
 
-  minimizer m(
-    [=](double a){
-    /*
-      const double tmax = 0.5, dt = tmax/nt;
-      for (unsigned i=0; i<=nt; ++i) {
-        auto& xy = xy2[i];
-        const double t = dt*i;
-        xy.x = bezx(t,a);
-        xy.y = bezy(t);
+    double chi2 = 0;
+    for (unsigned i=0, j=0, k; i<=nt; ++i) {
+      double d = xy1[i]*xy2[j], d2;
+      for (k=j; k<nt; ) {
+        d2 = xy1[i]*xy2[++k];
+        if (d2 > d) { --k; break; }
+        else d = d2;
       }
-
-      double chi2 = 0;
-      for (unsigned i=0, j=0, k; i<=nt; ++i) {
-        double d = xy1[i]*xy2[j], d2;
-        for (k=j; k<nt; ) {
-          d2 = xy1[i]*xy2[++k];
-          if (d2 > d) { --k; break; }
-          else d = d2;
-        }
-        if (k==j) for (; k>0; ) {
-          d2 = xy1[i]*xy2[--k];
-          if (d2 > d) { ++k; break; }
-          else d = d2;
-        }
-        chi2 += d;
+      if (k==j) for (; k>0; ) {
+        d2 = xy1[i]*xy2[--k];
+        if (d2 > d) { ++k; break; }
+        else d = d2;
       }
+      chi2 += d;
+    }
 
-      return chi2;
-    */
-      return sq(a-0.45);
-    },
-    gsl_min_fminimizer_brent,
-    // gsl_min_fminimizer_goldensection,
-    // gsl_min_fminimizer_quad_golden,
-    a, a1, a2
-  );
+    return chi2;
+  }, 0.2, 0., 0.5);
 
-  cout << "minimization algorithm: " << m.name() << '\n';
-
-  cout << format("{:5} [{:9}, {:9}] {:9} {:12}\n",
+  cout << format("{:>5} [{:14}, {:14}] {:14} {}\n",
           "iter", "lower", "upper", "min", "l - u");
 
   bool stop = false;
   for (unsigned iter=0; ; ++iter) {
-    cout << format("{:5} [{:.7f}, {:.7f}] {:.7f} {:.7e}\n",
-            iter, a1, a2, a, a2-a1);
+    cout << format("{:>5} [{:.8e}, {:.8e}] {:.8e} {:.8e}\n",
+            iter, m.x1, m.x2, m.x0, m.x2-m.x1);
 
     if (stop || iter >= 1000) break;
 
-    m.iterate();
+    const double a1 = m.x0;
+    m();
 
-    a  = m.minimum();
-    a1 = m.lower();
-    a2 = m.upper();
-
-    if (gsl_min_test_interval(a1, a2, 1e-4, 0) != GSL_CONTINUE)
+    if (m.x2-m.x1 < 1e-6 || std::abs(a1-m.x0) < 1e-8)
       stop = true;
   }
 
