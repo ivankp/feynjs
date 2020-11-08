@@ -126,17 +126,47 @@ int main(int argc, char* argv[]) {
 
       double chi2 = 0;
       for (unsigned i=0, j=0, k; i<=nt; ++i) {
-        double d = xy1[i]*xy2[j], d2;
+        const auto p = xy1[i];
+        // find nearest point
+        double d = p*xy2[j], d2;
         for (k=j; k<nt; ) {
-          d2 = xy1[i]*xy2[++k];
+          d2 = p*xy2[++k];
           if (d2 > d) { --k; break; }
           else d = d2;
         }
         if (k==j) for (; k>0; ) {
-          d2 = xy1[i]*xy2[--k];
+          d2 = p*xy2[--k];
           if (d2 > d) { ++k; break; }
           else d = d2;
         }
+        j = k;
+
+        // linear interpolation
+        for (int k=-1; k<2; k+=2) {
+          if (j+k > nt) continue;
+          point p0;
+          auto p1 = xy2[j];
+          auto p2 = xy2[j+k];
+          auto p3 = p;
+          double a = (p1.y-p2.y)/(p1.x-p2.x), b;
+#define SWAP(x,y) b = x; x = y; y = b;
+          if (a > 1) { // flip axes to keep slope below 1 for precision
+            SWAP(p1.x,p1.y);
+            SWAP(p2.x,p2.y);
+            SWAP(p3.x,p3.y);
+            a = 1/a;
+          }
+          b = p1.y - a*p1.x;
+          p0.x = (p3.x + a*(p3.y-b))/(1+a*a);
+          double xmin = p1.x, xmax = p2.x;
+          if (xmin > xmax) std::swap(xmin,xmax);
+          if (xmin <= p0.x && p0.x <= xmax) {
+            p0.y = a*p0.x + b;
+            d2 = p0*p3;
+            if (d2 < d) d = d2;
+          }
+        }
+
         chi2 += d;
       }
 
