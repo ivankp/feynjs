@@ -1,23 +1,28 @@
 #include <iostream>
-#include <iomanip>
 #include <cmath>
 #include <numbers>
+#include <type_traits>
+#include <fmt/core.h>
+
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_min.h>
 
 using std::cout;
 using std::endl;
 using std::numbers::pi;
+using fmt::format;
 
 template <typename... T>
 [[ gnu::always_inline ]]
 constexpr auto sq(const T&... x) noexcept { return (... + (x*x)); }
 
-double cbezx(double t, double a) noexcept {
+double bezx(double t, double a) noexcept {
   const double u = 1-t, t2 = t*t;
   return 3*a*u*u*t + 3*(1-a)*u*t2 + t*t2;
 }
-double cbezy(double t) noexcept {
-  static constexpr double b = 4./3;
-  return 3*b*t*(1-t);
+double bezy(double t) noexcept {
+  return 4*t*(1-t); // b = 4/3
 }
 
 double fth(double g) noexcept {
@@ -36,26 +41,53 @@ struct point {
   point operator-(const point& o) const noexcept {
     return { x-o.x, y-o.y };
   }
-
-  void rotate(double c, double s) noexcept {
-    std::tie(x,y) = std::make_tuple(
-      x*c - y*s,
-      y*c + x*s
-    );
+  double operator*(const point& o) const noexcept {
+    return sq(x-o.x,y-o.y);
   }
 };
 
-int main(int argc, char* argv[]) {
-  cout << std::setprecision(9) << std::fixed;
+template <typename F>
+class minimizer {
+  F f;
+  gsl_min_fminimizer * const s;
+  gsl_function g;
+  static double wrap(double x, void* f) {
+    return (*reinterpret_cast<F*>(f))(x);
+  }
+public:
+  template <typename T>
+  minimizer(
+    T&& f, const gsl_min_fminimizer_type* t,
+    double x0, double x_lower, double x_upper
+  ): f(std::forward<T>(f)), s(gsl_min_fminimizer_alloc(t)) {
+    g.function = &wrap;
+    g.params = &f;
+    gsl_min_fminimizer_set(s, &g, x0, x_lower, x_upper);
+  }
+  ~minimizer() {
+    gsl_min_fminimizer_free(s);
+  }
 
+  auto name   () { return gsl_min_fminimizer_name(s); }
+  auto iterate() { return gsl_min_fminimizer_iterate(s); }
+  auto minimum() { return gsl_min_fminimizer_x_minimum(s); }
+  auto lower  () { return gsl_min_fminimizer_x_lower(s); }
+  auto upper  () { return gsl_min_fminimizer_x_upper(s); }
+};
+
+template <typename F>
+minimizer(F&&,...) -> minimizer<std::decay_t<F>>;
+
+int main(int argc, char* argv[]) {
   const double
     g = 2,
     th = fth(g),
     x0 = fx(0,th),
     xbot = fx(pi,th)-x0;
 
-  constexpr unsigned nt = 10;
-  point xy1[nt+1], xy2[nt+1];
+  const unsigned nt = 100;
+  point *const xy1 = new point[nt+1],
+        *const xy2 = new point[nt+1];
 
   { const double tmax = 0.25, dt = tmax/nt;
     for (unsigned i=0; i<=nt; ++i) {
@@ -66,46 +98,67 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  { const double tmax = 0.5, dt = tmax/nt;
-    const double a = atof(argv[1]);
-    for (unsigned i=0; i<=nt; ++i) {
-      auto& xy = xy2[i];
-      const double t = dt*i;
-      xy.x = cbezx(t,a);
-      xy.y = cbezy(t);
-    }
-  }
+  double a1=0.3, a2=0.5, a=(a1+a2)/2;
 
-  double chi2 = 0;
-  for (unsigned i=0, j=0; i<=nt; ++i) {
-    for (;;) {
-      auto p1 = xy1[j];
-      auto p3 = xy1[j+1] - p1;
-      auto p2 = xy2[i] - p1;
-
-      const double
-        ang = pi-std::atan2(p3.y,p3.x),
-        s = std::sin(ang),
-        c = std::cos(ang);
-
-      p2.rotate(c,s);
-      p3.rotate(c,s);
-
-      if (!( (p3.x <= p2.x && p2.x <= 0) || (0 >= p2.x && p2.x >= p3.x) )) {
-        if ((p2.x<0)==(p3.x<0)) {
-          ++j;
-          if (j<nt) continue;
-          else --j;
-        } else {
-          --j;
-          if (j<nt) continue;
-          else ++j;
-        }
+  minimizer m(
+    [=](double a){
+    /*
+      const double tmax = 0.5, dt = tmax/nt;
+      for (unsigned i=0; i<=nt; ++i) {
+        auto& xy = xy2[i];
+        const double t = dt*i;
+        xy.x = bezx(t,a);
+        xy.y = bezy(t);
       }
-      chi2 += sq(p2.y);
-      break;
-    }
+
+      double chi2 = 0;
+      for (unsigned i=0, j=0, k; i<=nt; ++i) {
+        double d = xy1[i]*xy2[j], d2;
+        for (k=j; k<nt; ) {
+          d2 = xy1[i]*xy2[++k];
+          if (d2 > d) { --k; break; }
+          else d = d2;
+        }
+        if (k==j) for (; k>0; ) {
+          d2 = xy1[i]*xy2[--k];
+          if (d2 > d) { ++k; break; }
+          else d = d2;
+        }
+        chi2 += d;
+      }
+
+      return chi2;
+    */
+      return sq(a-0.45);
+    },
+    gsl_min_fminimizer_brent,
+    // gsl_min_fminimizer_goldensection,
+    // gsl_min_fminimizer_quad_golden,
+    a, a1, a2
+  );
+
+  cout << "minimization algorithm: " << m.name() << '\n';
+
+  cout << format("{:5} [{:9}, {:9}] {:9} {:12}\n",
+          "iter", "lower", "upper", "min", "l - u");
+
+  bool stop = false;
+  for (unsigned iter=0; ; ++iter) {
+    cout << format("{:5} [{:.7f}, {:.7f}] {:.7f} {:.7e}\n",
+            iter, a1, a2, a, a2-a1);
+
+    if (stop || iter >= 1000) break;
+
+    m.iterate();
+
+    a  = m.minimum();
+    a1 = m.lower();
+    a2 = m.upper();
+
+    if (gsl_min_test_interval(a1, a2, 1e-4, 0) != GSL_CONTINUE)
+      stop = true;
   }
 
-  cout << chi2 << endl;
+  delete[] xy1;
+  delete[] xy2;
 }
