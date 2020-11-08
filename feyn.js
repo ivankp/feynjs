@@ -1,8 +1,9 @@
 // http://www.petercollingridge.co.uk/tutorials/svg/interactive/dragging/
 // https://developer.mozilla.org/en-US/docs/Web/API/SVGTransformList
 
-const sin_a = 0.41033104341626886;
-const sin_b = 1.3358374629527159;
+const rphi = (Math.sqrt(5)-1)/2;
+const gb = 4./3.;
+const ga = a => 0.038818339370 + a*0.184069954091;
 const save_padding = 5;
 
 function make(tag,p) {
@@ -139,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.addEventListener('click',function(){
     const g = SVG('g',svg);
     const arrow_scale = 1.75;
-    const l = [80,6], s = [,1];
+    const l = [80,5], s = [,1];
     const d = 'm 0,0 '+l[0]+',0';
     SVG('path',g,d);
     const arrow = SVG('path',g,{
@@ -177,21 +178,60 @@ document.addEventListener('DOMContentLoaded', () => {
   div = make('div',left);
   btn = make('button',div);
   btn.textContent = 'photon';
-  const nosc = make('input',div);
-  nosc.type = 'text';
-  nosc.value = 8;
-  nosc.size = 2;
+  const np = make('input',div);
+  np.type = 'text';
+  np.value = 8;
+  np.size = 2;
   btn.addEventListener('click',function(){
     const g = SVG('g',svg);
-    const n = nosc.value;
+    const n = np.value;
     let d = 'm 0,0 c';
-    const a1 = (sin_a*10).toFixed(4),
-          a2 = ((1-sin_a)*10).toFixed(4),
-          b  = (sin_b*5).toFixed(4);
+    const A = 10,
+          a  = ga(2),
+          a1 = (a*A).toFixed(4),
+          a2 = ((1-a)*A).toFixed(4),
+          b  = (gb*A*0.5).toFixed(4);
     for (let i=0; i<n; ++i) {
-      if (i===0) d += ' '+a1+','+(i%2?'':'-')+b;
-      else if (i==1) d += ' s';
-      d += ' '+a2+','+(i%2?'':'-')+b + ' '+(10)+','+(0);
+      if (i===0) d += ` ${a1},-${b}`;
+      else if (i===1) d += ' s';
+      d += ` ${a2},${i%2?'':'-'}${b} ${A},0`;
+    }
+    SVG('path',g,d);
+    SVG('path',g,d,null,'ghost');
+    translate(g,20,20);
+  });
+
+  div = make('div',left);
+  btn = make('button',div);
+  btn.textContent = 'gluon';
+  const gluon_opts = [[15],[0.7],[2]].map(x => {
+    const o = make('input',div);
+    o.type = 'text';
+    o.value = x[0];
+    o.size = 2;
+    return o;
+  });
+  btn.addEventListener('click',function(){
+    const g = SVG('g',svg);
+    const n = gluon_opts[0].value;
+    let c = gluon_opts[1].value;
+    if (c < 0) c = 0;
+    if (c > 2) c = 2;
+    const r = gluon_opts[2].value;
+    let d = 'm 0,0 c';
+    const Ay = 5, Ax = Ay*r,
+          a  = ga(c),
+          a1 = (a*Ax).toFixed(4),
+          a2 = ((1-a)*Ax).toFixed(4),
+          a3 = ((c-1)*Ax).toFixed(4),
+          a4 = ((c-a-1)*Ax).toFixed(4),
+          b  = (gb*Ay).toFixed(4);
+    for (let i=0; i<n; ++i) {
+      if (i===0) d += ` ${a1},-${b}`;
+      else if (i===1) d += ' s';
+      d += i%2
+        ? ` ${a4},${ b} ${a3},0`
+        : ` ${a2},${-b} ${Ax},0`;
     }
     SVG('path',g,d);
     SVG('path',g,d,null,'ghost');
