@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include <cstring>
 #include <numbers>
 #include <limits>
 #include <type_traits>
@@ -78,70 +79,109 @@ template <typename F>
 brent(F&&,...) -> brent<std::decay_t<F>>;
 
 int main(int argc, char* argv[]) {
-  const double
-    g = 2,
-    th = fth(g),
-    x0 = fx(0,th),
-    xbot = fx(pi,th)-x0;
+  if (argc < 3) {
+    cout << "usage: " << argv[0] << " nt ng [-v]\n";
+    return 1;
+  }
+  const unsigned
+    nt = atoi(argv[1]),
+    ng = atoi(argv[2]);
 
-  const unsigned nt = 100;
+  const bool verbose = argc > 3 && !strcmp(argv[3],"-v");
+
   point *const xy1 = new point[nt+1],
-        *const xy2 = new point[nt+1];
+        *const xy2 = new point[nt+1],
+        *const ga  = new point[ng+1];
 
-  { const double tmax = 0.25, dt = tmax/nt;
-    for (unsigned i=0; i<=nt; ++i) {
-      auto& xy = xy1[i];
-      const double t = dt*i;
-      xy.x = (fx(2*pi*t,th)-x0)/xbot;
-      xy.y = fy(t);
+  const double dg = 2./ng;
+  for (unsigned gi=0; gi<=ng; ++gi) {
+    const double
+      g = dg*gi,
+      th = fth(g),
+      x0 = fx(0,th),
+      xbot = fx(pi,th)-x0;
+
+    { const double tmax = 0.25, dt = tmax/nt;
+      for (unsigned i=0; i<=nt; ++i) {
+        auto& xy = xy1[i];
+        const double t = dt*i;
+        xy.x = (fx(2*pi*t,th)-x0)/xbot;
+        xy.y = fy(t);
+      }
     }
+
+    brent m([=](double a){
+      const double tmax = 0.5, dt = tmax/nt;
+      for (unsigned i=0; i<=nt; ++i) {
+        auto& xy = xy2[i];
+        const double t = dt*i;
+        xy.x = bezx(t,a);
+        xy.y = bezy(t);
+      }
+
+      double chi2 = 0;
+      for (unsigned i=0, j=0, k; i<=nt; ++i) {
+        double d = xy1[i]*xy2[j], d2;
+        for (k=j; k<nt; ) {
+          d2 = xy1[i]*xy2[++k];
+          if (d2 > d) { --k; break; }
+          else d = d2;
+        }
+        if (k==j) for (; k>0; ) {
+          d2 = xy1[i]*xy2[--k];
+          if (d2 > d) { ++k; break; }
+          else d = d2;
+        }
+        chi2 += d;
+      }
+
+      return chi2;
+    }, 0.2, 0., 0.5);
+
+    if (verbose)
+      cout << format("{:>5} [{:14}, {:14}] {:14} {}\n",
+              "iter", "lower", "upper", "min", "l - u");
+
+    double a = std::numeric_limits<double>::quiet_NaN();
+    for (unsigned iter=0; ; ++iter) {
+      if (verbose)
+        cout << format("{:>5} [{:.8e}, {:.8e}] {:.8e} {:.8e}\n",
+                iter, m.x1, m.x2, m.x0, m.x2-m.x1);
+
+      if (m.x2-m.x1 < 1e-8 || std::abs(a-m.x0) < 1e-9 || iter >= 1000) {
+        a = m.x0;
+        break;
+      }
+
+      a = m.x0;
+      try {
+        m();
+      } catch (const std::range_error& e) {
+        if (verbose)
+          cout << e.what() << endl;
+        // break;
+        if (m.x0 < m.x1) {
+          m.x1 = 2*m.x0-m.x2;
+        } else {
+          m.x2 = 2*m.x0-m.x1;
+        }
+      }
+    }
+
+    if (verbose)
+      cout << format("\ng = {:.8e}, a = {:.8e}\n\n",g,a);
+
+    ga[gi] = { g, a };
   }
 
-  brent m([=](double a){
-    const double tmax = 0.5, dt = tmax/nt;
-    for (unsigned i=0; i<=nt; ++i) {
-      auto& xy = xy2[i];
-      const double t = dt*i;
-      xy.x = bezx(t,a);
-      xy.y = bezy(t);
-    }
-
-    double chi2 = 0;
-    for (unsigned i=0, j=0, k; i<=nt; ++i) {
-      double d = xy1[i]*xy2[j], d2;
-      for (k=j; k<nt; ) {
-        d2 = xy1[i]*xy2[++k];
-        if (d2 > d) { --k; break; }
-        else d = d2;
-      }
-      if (k==j) for (; k>0; ) {
-        d2 = xy1[i]*xy2[--k];
-        if (d2 > d) { ++k; break; }
-        else d = d2;
-      }
-      chi2 += d;
-    }
-
-    return chi2;
-  }, 0.2, 0., 0.5);
-
-  cout << format("{:>5} [{:14}, {:14}] {:14} {}\n",
-          "iter", "lower", "upper", "min", "l - u");
-
-  bool stop = false;
-  for (unsigned iter=0; ; ++iter) {
-    cout << format("{:>5} [{:.8e}, {:.8e}] {:.8e} {:.8e}\n",
-            iter, m.x1, m.x2, m.x0, m.x2-m.x1);
-
-    if (stop || iter >= 1000) break;
-
-    const double a1 = m.x0;
-    m();
-
-    if (m.x2-m.x1 < 1e-6 || std::abs(a1-m.x0) < 1e-8)
-      stop = true;
+  cout << '{';
+  for (unsigned gi=0; gi<=ng; ++gi) {
+    if (gi) cout << ',';
+    cout << format("{{{:.2f},{:.8f}}}",ga[gi].x,ga[gi].y);
   }
+  cout << "}\n";
 
   delete[] xy1;
   delete[] xy2;
+  delete[] ga;
 }
